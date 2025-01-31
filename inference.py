@@ -1,5 +1,9 @@
+from flask import Flask, request, jsonify
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
+
+app = Flask(__name__)
+inference = DeepSeekInference(model_path)
 
 class DeepSeekInference:
     def __init__(self, model_path):
@@ -30,5 +34,12 @@ def main():
         response = inference.generate_response(prompt)
         print("Response:", response)
 
+@app.route('/generate', methods=['POST'])
+def generate():
+    prompt = request.json.get('prompt', '')
+    response = inference.generate_response(prompt)
+    return jsonify({'response': response})
+    
+
 if __name__ == "__main__":
-    main()
+    app.run(host='0.0.0.0', port=8080)

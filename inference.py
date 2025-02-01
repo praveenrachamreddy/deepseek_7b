@@ -3,11 +3,9 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 app = Flask(__name__)
-inference = DeepSeekInference(model_path)
 
 class DeepSeekInference:
     def __init__(self, model_path):
-        # Detect available device
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"Using device: {self.device}")
 
@@ -23,23 +21,25 @@ class DeepSeekInference:
         outputs = self.model.generate(**inputs, max_length=max_length)
         return self.tokenizer.decode(outputs[0], skip_special_tokens=True)
 
-def main():
-    model_path = '/app/deepseek-model'
-    inference = DeepSeekInference(model_path)
-    
-    while True:
-        prompt = input("Enter your prompt (or 'exit' to quit): ")
-        if prompt.lower() == 'exit':
-            break
-        response = inference.generate_response(prompt)
-        print("Response:", response)
+# Initialize model
+model_path = '/app/deepseek-model'
+inference = DeepSeekInference(model_path)
 
 @app.route('/generate', methods=['POST'])
 def generate():
-    prompt = request.json.get('prompt', '')
-    response = inference.generate_response(prompt)
-    return jsonify({'response': response})
-    
+    try:
+        prompt = request.json.get('prompt', '')
+        if not prompt:
+            return jsonify({'error': 'No prompt provided'}), 400
+        
+        response = inference.generate_response(prompt)
+        return jsonify({'response': response})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
-if __name__ == "__main__":
+@app.route('/health', methods=['GET'])
+def health():
+    return jsonify({'status': 'healthy'})
+
+if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
